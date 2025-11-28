@@ -10,7 +10,7 @@ def get_index():
     Loads data and creates the VectorStoreIndex. Cached to avoid reloading on every run.
     Persists the index to disk to speed up future runs.
     """
-    from llama_index.core import Document, VectorStoreIndex, StorageContext, load_index_from_storage
+    from llama_index.core import Document, VectorStoreIndex, StorageContext, load_index_from_storage, SimpleDirectoryReader
     import pandas as pd
     
     STORAGE_DIR = "./storage"
@@ -22,6 +22,7 @@ def get_index():
     # Check if storage already exists
     if os.path.exists(STORAGE_DIR):
         try:
+            # st.info("Loading index from storage...")
             storage_context = StorageContext.from_defaults(persist_dir=STORAGE_DIR)
             index = load_index_from_storage(storage_context)
             return index
@@ -29,10 +30,9 @@ def get_index():
             st.warning(f"Failed to load from storage: {e}. Re-indexing...")
     
     # If not, create new index
-    st.info("Creating new index (this may take a while)...")
     
     documents = []
-    files = [f for f in os.listdir(DATA_DIR) if f.endswith(('.xlsx', '.xls', '.csv'))]
+    files = [f for f in os.listdir(DATA_DIR) if f.endswith(('.xlsx', '.xls', '.csv', '.pdf'))]
     
     progress_bar = st.progress(0)
     status_text = st.empty()
@@ -41,29 +41,64 @@ def get_index():
         file_path = os.path.join(DATA_DIR, file)
         status_text.text(f"Processing {file}...")
         try:
-            if file.endswith('.csv'):
-                df = pd.read_csv(file_path)
-            else:
-                df = pd.read_excel(file_path)
-            
-            # Convert DataFrame to string representation for the LLM
-            # We use to_string() or to_json() or just iterate. 
-            # A simple way is to convert each row to a text chunk, or the whole df if small.
-            # For RAG, row-based or chunk-based is usually better.
-            # Let's try converting the whole dataframe to a text summary first if it's "small".
-            # Or better: "Column: Value, Column: Value..." format for each row.
-            
-            text_content = df.to_string(index=False)
-            doc = Document(text=text_content, metadata={"filename": file})
-            documents.append(doc)
+            # Use SimpleDirectoryReader for all files as requested
+            # This might be slower for Excel but allows checking which one hangs
+            file_docs = SimpleDirectoryReader(input_files=[file_path]).load_data()
+            for d in file_docs:
+                d.metadata["filename"] = file
+            documents.extend(file_docs)
             
         except Exception as e:
             st.error(f"Error reading {file}: {e}")
         
         progress_bar.progress((i + 1) / len(files))
     
-    status_text.text("Generating Embeddings and Index...")
-    index = VectorStoreIndex.from_documents(documents)
+    status_text.text("Parsing documents into nodes...")
+    nodes = Settings.node_parser.get_nodes_from_documents(documents)
+    st.write(f"Total nodes to embed: {len(nodes)}")
+    
+    status_text.text("Generating Embeddings and Indexing (Batch Processing)...")
+    embedding_progress = st.progress(0)
+    
+    # Create empty index first
+    index = VectorStoreIndex([])
+    
+    # Process nodes in batches to show progress
+    BATCH_SIZE = 5 # Small batch size to show frequent updates
+    total_batches = (len(nodes) // BATCH_SIZE) + 1
+    
+    import time
+    start_time = time.time()
+    
+    for j in range(total_batches):
+        start_idx = j * BATCH_SIZE
+        end_idx = start_idx + BATCH_SIZE
+        batch_nodes = nodes[start_idx:end_idx]
+        
+        if not batch_nodes:
+            continue
+        
+        # Calculate ETA
+        elapsed_time = time.time() - start_time
+        eta_msg = ""
+        if j > 0:
+            avg_time = elapsed_time / j
+            remaining_batches = total_batches - j
+            eta_seconds = int(avg_time * remaining_batches)
+            # Format nicely
+            if eta_seconds > 60:
+                eta_str = f"{eta_seconds // 60}m {eta_seconds % 60}s"
+            else:
+                eta_str = f"{eta_seconds}s"
+            eta_msg = f" - ETA: {eta_str}"
+        else:
+            eta_msg = " - ETA: Calculating..."
+            
+        status_text.text(f"Embedding batch {j+1}/{total_batches} (Nodes {start_idx}-{end_idx}){eta_msg}...")
+        index.insert_nodes(batch_nodes)
+        embedding_progress.progress((j + 1) / total_batches)
+    
+    embedding_progress.empty()
     
     # Persist to disk
     index.storage_context.persist(persist_dir=STORAGE_DIR)
@@ -72,7 +107,7 @@ def get_index():
     
     return index
 
-def get_chat_engine(model_name="models/gemini-pro"):
+def get_chat_engine():
     """
     Initializes and returns the chat engine using Gemini.
     """
@@ -83,7 +118,8 @@ def get_chat_engine(model_name="models/gemini-pro"):
 
     try:
         # Configure Gemini
-        Settings.llm = Gemini(api_key=api_key, model_name=model_name)
+        # Reverting to gemini-pro as 1.5-flash is also not found
+        Settings.llm = Gemini(api_key=api_key, model_name="models/gemini-2.5-flash")
         Settings.embed_model = GeminiEmbedding(api_key=api_key, model_name="models/text-embedding-004")
 
         index = get_index()
@@ -92,8 +128,20 @@ def get_chat_engine(model_name="models/gemini-pro"):
              st.warning("Data directory is empty. Please add documents to 'data/' for RAG.")
              return None
         
+        # System prompt to restrict context
+        system_prompt = (
+            "You are an AI assistant for analyzing UFPR data. "
+            "You must ONLY answer questions based on the provided context from the documents. "
+            "If the answer is not in the documents, state clearly that you do not know based on the available data. "
+            "Do not hallucinate or use outside knowledge."
+        )
+
         # Use condense_plus_context mode for better handling of follow-up questions and context
-        return index.as_chat_engine(chat_mode="condense_plus_context", verbose=True)
+        return index.as_chat_engine(
+            chat_mode="condense_plus_context", 
+            verbose=True,
+            system_prompt=system_prompt
+        )
     except Exception as e:
         st.error(f"Error initializing RAG engine: {str(e)}")
         return None

@@ -1,31 +1,21 @@
 import streamlit as st
 from src.services.rag_engine import get_chat_engine
 
-from src.utils.models import get_available_models
-
 def render_chat():
     st.header("💬 Assistente de IA")
-
-    # Model selection
-    available_models = get_available_models()
-    if available_models:
-        selected_model = st.selectbox("Escolha o Modelo:", available_models, index=0)
-    else:
-        selected_model = "models/gemini-pro"
-        st.warning("Could not fetch models. Defaulting to gemini-pro.")
 
     # Initialize chat history
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # Initialize chat engine if not already done or if model changed
-    if "chat_engine" not in st.session_state or st.session_state.get("current_model") != selected_model:
-        with st.spinner(f"Initializing AI with {selected_model}... This might take a while for large files."):
-            st.session_state.chat_engine = get_chat_engine(model_name=selected_model)
-            st.session_state.current_model = selected_model
+    # Initialize chat engine if not already done
+    if "chat_engine" not in st.session_state:
+        with st.spinner("Initializing AI..."):
+            st.session_state.chat_engine = get_chat_engine()
 
     # Chat container with fixed height for scrolling
-    messages_container = st.container(height=600)
+    # Reduced height slightly to fit better on smaller screens
+    messages_container = st.container(height=500)
 
     # Display chat messages from history inside the container
     with messages_container:
