@@ -9,6 +9,7 @@ from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
 def get_index():
     from llama_index.core import Document, VectorStoreIndex, StorageContext, load_index_from_storage, SimpleDirectoryReader
     import pandas as pd
+    import gc
     
     STORAGE_DIR = "./storage"
     DATA_DIR = "data"
@@ -20,13 +21,15 @@ def get_index():
         try:
             storage_context = StorageContext.from_defaults(persist_dir=STORAGE_DIR)
             index = load_index_from_storage(storage_context)
+            gc.collect() 
             return index
         except Exception as e:
             st.warning(f"Failed to load from storage: {e}. Re-indexing...")
             if os.path.exists(STORAGE_DIR):
                 shutil.rmtree(STORAGE_DIR)
         
-    documents = []
+    index = VectorStoreIndex([])
+    
     files = [f for f in os.listdir(DATA_DIR) if f.endswith(('.xlsx', '.xls', '.csv', '.pdf'))]
     
     progress_bar = st.progress(0)
@@ -36,6 +39,7 @@ def get_index():
         file_path = os.path.join(DATA_DIR, file)
         status_text.text(f"Processing {file}...")
         try:
+            documents = []
             if file.endswith('.csv'):
                 try:
                     df = pd.read_csv(file_path, sep=None, engine='python', dtype=str)
@@ -43,70 +47,37 @@ def get_index():
                     df = pd.read_csv(file_path, sep=';', dtype=str)
             
                 df.columns = df.columns.str.replace('\ufeff', '').str.strip()
-                
                 df = df.fillna("")
-                df = df.astype(str)
-
+                
                 text = df.to_csv(index=False)
-                file_docs = [Document(text=text, metadata={"filename": file})]
+                documents = [Document(text=text, metadata={"filename": file})]
+                
+                del df
+                gc.collect()
             else:
-                file_docs = SimpleDirectoryReader(input_files=[file_path]).load_data()
-                for d in file_docs:
+                documents = SimpleDirectoryReader(input_files=[file_path]).load_data()
+                for d in documents:
                     d.metadata["filename"] = file
 
-            documents.extend(file_docs)
+            nodes = Settings.node_parser.get_nodes_from_documents(documents)
+            
+            index.insert_nodes(nodes)
+            
+            del documents
+            del nodes
+            gc.collect()
             
         except Exception as e:
             st.error(f"Error reading {file}: {e}")
         
         progress_bar.progress((i + 1) / len(files))
     
-    status_text.text("Parsing documents into nodes...")
-    nodes = Settings.node_parser.get_nodes_from_documents(documents)
-    st.write(f"Total nodes to embed: {len(nodes)}")
-    
-    status_text.text("Generating Embeddings and Indexing (Batch Processing)...")
-    embedding_progress = st.progress(0)
-    
-    index = VectorStoreIndex([])
-    
-    BATCH_SIZE = 100
-    total_batches = (len(nodes) // BATCH_SIZE) + 1
-    
-    import time
-    start_time = time.time()
-    
-    for j in range(total_batches):
-        start_idx = j * BATCH_SIZE
-        end_idx = start_idx + BATCH_SIZE
-        batch_nodes = nodes[start_idx:end_idx]
-        
-        if not batch_nodes:
-            continue
-        
-        elapsed_time = time.time() - start_time
-        eta_msg = ""
-        if j > 0:
-            avg_time = elapsed_time / j
-            remaining_batches = total_batches - j
-            eta_seconds = int(avg_time * remaining_batches)
-            if eta_seconds > 60:
-                eta_str = f"{eta_seconds // 60}m {eta_seconds % 60}s"
-            else:
-                eta_str = f"{eta_seconds}s"
-            eta_msg = f" - ETA: {eta_str}"
-        else:
-            eta_msg = " - ETA: Calculating..."
-            
-        status_text.text(f"Embedding batch {j+1}/{total_batches} (Nodes {start_idx}-{end_idx}){eta_msg}...")
-        index.insert_nodes(batch_nodes)
-        embedding_progress.progress((j + 1) / total_batches)
-    
-    embedding_progress.empty()
-    
+    status_text.text("Persisting index...")
     index.storage_context.persist(persist_dir=STORAGE_DIR)
+    
     status_text.empty()
     progress_bar.empty()
+    gc.collect()
     
     return index
 
