@@ -1,15 +1,12 @@
 import os
+import shutil
 import streamlit as st
 from llama_index.core import VectorStoreIndex, Settings
-from llama_index.llms.gemini import Gemini
-from llama_index.embeddings.gemini import GeminiEmbedding
+from llama_index.llms.google_genai import GoogleGenAI
+from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
 
-@st.cache_resource(show_spinner="Loading and indexing data...")
+@st.cache_resource(show_spinner=False)
 def get_index():
-    """
-    Loads data and creates the VectorStoreIndex. Cached to avoid reloading on every run.
-    Persists the index to disk to speed up future runs.
-    """
     from llama_index.core import Document, VectorStoreIndex, StorageContext, load_index_from_storage, SimpleDirectoryReader
     import pandas as pd
     
@@ -19,18 +16,16 @@ def get_index():
     if not os.path.exists(DATA_DIR) or not os.listdir(DATA_DIR):
         return None
 
-    # Check if storage already exists
     if os.path.exists(STORAGE_DIR):
         try:
-            # st.info("Loading index from storage...")
             storage_context = StorageContext.from_defaults(persist_dir=STORAGE_DIR)
             index = load_index_from_storage(storage_context)
             return index
         except Exception as e:
             st.warning(f"Failed to load from storage: {e}. Re-indexing...")
-    
-    # If not, create new index
-    
+            if os.path.exists(STORAGE_DIR):
+                shutil.rmtree(STORAGE_DIR)
+        
     documents = []
     files = [f for f in os.listdir(DATA_DIR) if f.endswith(('.xlsx', '.xls', '.csv', '.pdf'))]
     
@@ -41,11 +36,24 @@ def get_index():
         file_path = os.path.join(DATA_DIR, file)
         status_text.text(f"Processing {file}...")
         try:
-            # Use SimpleDirectoryReader for all files as requested
-            # This might be slower for Excel but allows checking which one hangs
-            file_docs = SimpleDirectoryReader(input_files=[file_path]).load_data()
-            for d in file_docs:
-                d.metadata["filename"] = file
+            if file.endswith('.csv'):
+                try:
+                    df = pd.read_csv(file_path, sep=None, engine='python', dtype=str)
+                except:
+                    df = pd.read_csv(file_path, sep=';', dtype=str)
+            
+                df.columns = df.columns.str.replace('\ufeff', '').str.strip()
+                
+                df = df.fillna("")
+                df = df.astype(str)
+
+                text = df.to_csv(index=False)
+                file_docs = [Document(text=text, metadata={"filename": file})]
+            else:
+                file_docs = SimpleDirectoryReader(input_files=[file_path]).load_data()
+                for d in file_docs:
+                    d.metadata["filename"] = file
+
             documents.extend(file_docs)
             
         except Exception as e:
@@ -60,11 +68,9 @@ def get_index():
     status_text.text("Generating Embeddings and Indexing (Batch Processing)...")
     embedding_progress = st.progress(0)
     
-    # Create empty index first
     index = VectorStoreIndex([])
     
-    # Process nodes in batches to show progress
-    BATCH_SIZE = 5 # Small batch size to show frequent updates
+    BATCH_SIZE = 100
     total_batches = (len(nodes) // BATCH_SIZE) + 1
     
     import time
@@ -78,14 +84,12 @@ def get_index():
         if not batch_nodes:
             continue
         
-        # Calculate ETA
         elapsed_time = time.time() - start_time
         eta_msg = ""
         if j > 0:
             avg_time = elapsed_time / j
             remaining_batches = total_batches - j
             eta_seconds = int(avg_time * remaining_batches)
-            # Format nicely
             if eta_seconds > 60:
                 eta_str = f"{eta_seconds // 60}m {eta_seconds % 60}s"
             else:
@@ -100,7 +104,6 @@ def get_index():
     
     embedding_progress.empty()
     
-    # Persist to disk
     index.storage_context.persist(persist_dir=STORAGE_DIR)
     status_text.empty()
     progress_bar.empty()
@@ -117,10 +120,8 @@ def get_chat_engine():
         return None
 
     try:
-        # Configure Gemini
-        # Reverting to gemini-pro as 1.5-flash is also not found
-        Settings.llm = Gemini(api_key=api_key, model_name="models/gemini-2.5-flash")
-        Settings.embed_model = GeminiEmbedding(api_key=api_key, model_name="models/text-embedding-004")
+        Settings.llm = GoogleGenAI(api_key=api_key, model_name="models/gemini-2.5-flash")
+        Settings.embed_model = GoogleGenAIEmbedding(api_key=api_key, model_name="models/text-embedding-004")
 
         index = get_index()
         
@@ -128,15 +129,16 @@ def get_chat_engine():
              st.warning("Data directory is empty. Please add documents to 'data/' for RAG.")
              return None
         
-        # System prompt to restrict context
         system_prompt = (
             "You are an AI assistant for analyzing UFPR data. "
             "You must ONLY answer questions based on the provided context from the documents. "
             "If the answer is not in the documents, state clearly that you do not know based on the available data. "
             "Do not hallucinate or use outside knowledge."
+            "Do not quote the PDF or the CVS files directly when answering. But use it to generate the answer based on the csv, xlsx, xls files."
+            "Always answer in portuguese brazil."
+            "Always check all files you have acess before answer"
         )
 
-        # Use condense_plus_context mode for better handling of follow-up questions and context
         return index.as_chat_engine(
             chat_mode="condense_plus_context", 
             verbose=True,
