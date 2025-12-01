@@ -11,25 +11,6 @@ Este projeto é uma aplicação Streamlit que combina um Dashboard de visualiza�
 
 ## Como Executar
 
-1.  **Pré-requisitos**:
-    -   Ter o `uv` instalado (gerenciador de pacotes Python).
-    -   Ter uma API Key do Google Gemini.
-
-2.  **Configuração**:
-    -   Crie um arquivo `.env` na raiz do projeto:
-        ```env
-        GOOGLE_API_KEY=sua_chave_aqui
-        ```
-    -   Coloque seus arquivos de dados (Excel, CSV, PDF) na pasta `data/`.
-
-3.  **Rodar**:
-    ```bash
-    uv run streamlit run app.py
-    ```
-
-4.  **Acesso**:
-    -   Abra o navegador no endereço indicado (geralmente `http://localhost:8501`).
-
 ## Rodando com Docker (Recomendado)
 
 Esta aplicação está containerizada para facilitar a execução.
