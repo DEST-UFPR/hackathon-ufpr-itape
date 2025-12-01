@@ -1,4 +1,4 @@
-# Dashboard & Chat RAG - Dados UFPR
+<img width="899" height="433" alt="image" src="https://github.com/user-attachments/assets/82dc5662-8479-45eb-95a2-5cba191e3ad9" /># Dashboard & Chat RAG - Dados UFPR
 
 Este projeto é uma aplicação Streamlit que combina um Dashboard de visualização de dados (Excel/CSV) com um Chatbot inteligente (RAG) capaz de responder perguntas sobre os documentos.
 
@@ -45,3 +45,54 @@ Esta aplicação está containerizada para facilitar a execução.
 
 ### Observação sobre Persistência
 A pasta `storage/` é mapeada como um volume, então o índice gerado pela IA será persistido mesmo se você destruir o container. Se você adicionar novos arquivos na pasta `data/`, pode ser necessário reiniciar o container ou rodar o script de reindexação.
+
+## Modelagem e Tratamento dos Dados
+
+Os dados brutos foram remodelados para o padrão _Star Schema_, otimizando a performance e a clareza analítica. O conjunto de dados original foi transformado nas seguintes tabelas:
+#### Tabelas Fato:
+```
+FATO_AVCURSOS
+FATO_AVDISCIPLINAS
+FATO_AVINSTITUCIONAL
+```
+
+#### Tabelas Dimensão:
+```
+DIM_CURSOS
+DIM_DISCIPLINAS
+DIM_PERGUNTAS
+DIM_TIPO_PERGUNTA_SINAES
+DIM_UNIDADES
+```
+
+A relação entre as tabelas é feita principalmente entre as colunas ```ID_PERGUNTA``` e ```ID_QUESTIONARIO```.
+
+## Dashboards Analíticos
+Foram desenvolvidos cinco dashboards interativos para facilitar a visualização e aprofundamento das análises.
+
+1. Página Inicial:
+    - **Foco Analítico:** Panorama imediato da satisfação e engajamento.
+
+    - **Indicadores-Chave:** Satisfação Média Geral, Engajamento Total (Contagem de Respostas), Gap de Comunicação (% de "Desconheço"), Destaques e Pontos de Risco.
+
+2. SINAES:
+    - **Foco Analítico:** Conformidade e score institucional nos 5 Eixos Avaliativos
+
+    - **Indicadores-Chave:** Cobertura das Dimensões do SINAES, Score de Aprovação por Eixo e por Dimensão.
+
+3. Qualidade de Ensino:
+    - **Foco Analítico:** Avaliação do processo de ensino-aprendizagem
+
+    - **Indicadores-Chave:** Aderência ao Plano de Disciplina, Carga Horária, Índice de Didática, Histograma de Faixa de Satisfação e Comparativo de Score Pedagógico.
+
+
+4. Gestão de Cursos:
+    - **Foco Analítico:** Análise da estrutura curricular, apoio e resultados por unidade
+
+    - **Indicadores-Chave:** Interdisciplinaridade, Satisfação com Atendimento e Apoio, Taxa de Visibilidade de Apoio, Ranking de Satisfação por Setor e Gráfico de Dispersão (Score x Volume de Respostas).
+
+
+5. Clima Institucional:
+    - **Foco Analítico:** Percepção dos servidores sobre gestão e infraestrutura.
+
+    - **Indicadores-Chave:** Score de Transparência (RH/Movimentação), Índice de Segurança/Infraestrutura, Gap de Comunicação (Familiaridade com PDE), Ranking de Satisfação dos Servidores e Polarização de Opiniões (Net Score).
