@@ -1,4 +1,4 @@
-<img width="899" height="433" alt="image" src="https://github.com/user-attachments/assets/82dc5662-8479-45eb-95a2-5cba191e3ad9" /># Dashboard & Chat RAG - Dados UFPR
+# Dashboard & Chat RAG - Dados UFPR
 
 Este projeto é uma aplicação Streamlit que combina um Dashboard de visualização de dados (Excel/CSV) com um Chatbot inteligente (RAG) capaz de responder perguntas sobre os documentos.
 
