@@ -30,10 +30,8 @@ Esta aplicação está containerizada para facilitar a execução.
     ```
 
 2.  **Configuração**:
-    -   Crie um arquivo `.env` na raiz do projeto com sua chave de API:
-        ```env
-        GOOGLE_API_KEY=sua_chave_aqui
-        ```
+    -   Edite o arquvio `docker-compose.yml` e insira sua chave de API do Google
+        Voce pode gerala acessando: https://aistudio.google.com/api-keys
 
 3.  **Executar**:
     ```bash
