@@ -1,25 +1,28 @@
 # Dashboard & Chat RAG - Dados UFPR
 
-Este projeto é uma aplicação Streamlit que combina um Dashboard de visualização de dados (Excel/CSV) com um Chatbot inteligente (RAG) capaz de responder perguntas sobre os documentos.
+Este projeto é uma aplicação Streamlit que combina um Dashboard de visualização de dados (Excel/CSV) com um Chatbot inteligente híbrido (RAG + Análise de Dados) capaz de responder perguntas sobre os documentos e realizar análises quantitativas.
 
 ## Funcionalidades
 
 - **Dashboard**: Visualização de planilhas Excel e CSV localizadas na pasta `data/`.
-- **Chat RAG**: Assistente de IA (Gemini) que lê e responde perguntas baseadas nos documentos (PDFs, Excel, CSV) da pasta `data/`.
+- **Chat RAG Híbrido**: Assistente de IA (Gemini 2.5 Flash Live) que combina:
+  - **Análise de Dados**: Cálculos, agregações e rankings usando Pandas
+  - **Busca Semântica**: Respostas conceituais baseadas em documentos (PDFs, Excel, CSV)
+  - **Auto-Join**: Resolução automática de códigos para nomes legíveis (ex: COD_CURSO → CURSO)
 - **Indexação Otimizada**: Processamento de arquivos com barra de progresso e estimativa de tempo (ETA).
 - **Persistência**: O índice é salvo em disco (`storage/`) para carregamento instantâneo nas próximas execuções.
 
 ## Como Executar
 
-## Rodando com Docker (Recomendado)
+### Rodando com Docker (Recomendado)
 
 Esta aplicação está containerizada para facilitar a execução.
 
-### Pré-requisitos
+#### Pré-requisitos
 - Docker e Docker Compose instalados.
 - Git LFS instalado (para baixar os arquivos de índice).
 
-### Passo a Passo
+#### Passo a Passo
 
 1.  **Clone o repositório e baixe os arquivos grandes**:
     ```bash
@@ -30,8 +33,8 @@ Esta aplicação está containerizada para facilitar a execução.
     ```
 
 2.  **Configuração**:
-    -   Edite o arquvio `docker-compose.yml` e insira sua chave de API do Google
-        Voce pode gerala acessando: https://aistudio.google.com/api-keys
+    -   Edite o arquivo `docker-compose.yml` e insira sua chave de API do Google
+        Você pode gerá-la acessando: https://aistudio.google.com/api-keys
 
 3.  **Executar**:
     ```bash
@@ -41,56 +44,142 @@ Esta aplicação está containerizada para facilitar a execução.
 4.  **Acessar**:
     -   Acesse `http://localhost:8501` no seu navegador.
 
-### Observação sobre Persistência
+#### Observação sobre Persistência
 A pasta `storage/` é mapeada como um volume, então o índice gerado pela IA será persistido mesmo se você destruir o container. Se você adicionar novos arquivos na pasta `data/`, pode ser necessário reiniciar o container ou rodar o script de reindexação.
+
+### Rodando Localmente (Desenvolvimento)
+
+1.  **Instalar dependências**:
+    ```bash
+    uv sync
+    ```
+
+2.  **Configurar variáveis de ambiente**:
+    - Crie um arquivo `.env` na raiz do projeto
+    - Adicione sua chave de API: `GOOGLE_API_KEY=sua_chave_aqui`
+
+3.  **Executar aplicação**:
+    ```bash
+    uv run streamlit run app.py
+    ```
+
+4.  **Rodar testes** (opcional):
+    ```bash
+    # Testar análise de dados
+    uv run python tests/test_rag_system.py
+    
+    # Testar auto-join de nomes
+    uv run python tests/test_auto_join.py
+    
+    # Testar conexão com LLM
+    uv run python tests/test_llm.py
+    ```
 
 ## Modelagem e Tratamento dos Dados
 
 Os dados brutos foram remodelados para o padrão _Star Schema_, otimizando a performance e a clareza analítica. O conjunto de dados original foi transformado nas seguintes tabelas:
-#### Tabelas Fato:
+
+### Tabelas Fato:
 ```
-FATO_AVCURSOS
-FATO_AVDISCIPLINAS
-FATO_AVINSTITUCIONAL
+FATO_AVCURSOS         - Respostas da avaliação de cursos
+FATO_AVDISCIPLINAS    - Respostas da avaliação de disciplinas
+FATO_AVINSTITUCIONAL  - Respostas da avaliação institucional
 ```
 
-#### Tabelas Dimensão:
+### Tabelas Dimensão:
 ```
-DIM_CURSOS
-DIM_DISCIPLINAS
-DIM_PERGUNTAS
-DIM_TIPO_PERGUNTA_SINAES
-DIM_UNIDADES
+DIM_CURSOS                 - Informações dos cursos
+DIM_DISCIPLINAS            - Catálogo de disciplinas
+DIM_PERGUNTAS              - Texto e classificação das perguntas
+DIM_TIPO_PERGUNTA_SINAES   - Taxonomia SINAES
+DIM_UNIDADES               - Setores e centros da UFPR
 ```
 
-A relação entre as tabelas é feita principalmente entre as colunas ```ID_PERGUNTA``` e ```ID_QUESTIONARIO```.
+A relação entre as tabelas é feita principalmente através das colunas `ID_PERGUNTA`, `ID_QUESTIONARIO`, `COD_CURSO`, `COD_DISCIPLINA` e `SIGLA_LOTACAO`.
+
+## Arquitetura do Chat RAG Híbrido
+
+O assistente de IA utiliza um agente ReAct que escolhe automaticamente entre:
+
+1. **Ferramentas de Análise de Dados** (para perguntas quantitativas):
+   - `calculate_satisfaction`: Calcular satisfação (% Concordo)
+   - `count_responses`: Contar respostas
+   - `get_top_bottom`: Rankings (top/bottom N)
+   - `join_and_analyze`: Relacionar tabelas e analisar
+   - `get_table_schema`: Ver estrutura das tabelas
+
+2. **Busca Semântica** (para perguntas conceituais):
+   - `semantic_search`: Buscar informações em PDFs e documentos
+
+### Exemplos de Perguntas
+
+**Análise de Dados:**
+- "Quais os 5 cursos com maior satisfação?"
+- "Qual a média de satisfação das disciplinas?"
+- "Quantas respostas 'Desconheço' temos na avaliação institucional?"
+
+**Busca Semântica:**
+- "O que é SINAES?"
+- "Explique a metodologia da avaliação"
+- "Quais são os eixos avaliativos?"
 
 ## Dashboards Analíticos
+
 Foram desenvolvidos cinco dashboards interativos para facilitar a visualização e aprofundamento das análises.
 
-1. Página Inicial:
+1. **Página Inicial:**
     - **Foco Analítico:** Panorama imediato da satisfação e engajamento.
-
     - **Indicadores-Chave:** Satisfação Média Geral, Engajamento Total (Contagem de Respostas), Gap de Comunicação (% de "Desconheço"), Destaques e Pontos de Risco.
 
-2. SINAES:
+2. **SINAES:**
     - **Foco Analítico:** Conformidade e score institucional nos 5 Eixos Avaliativos
-
     - **Indicadores-Chave:** Cobertura das Dimensões do SINAES, Score de Aprovação por Eixo e por Dimensão.
 
-3. Qualidade de Ensino:
+3. **Qualidade de Ensino:**
     - **Foco Analítico:** Avaliação do processo de ensino-aprendizagem
-
     - **Indicadores-Chave:** Aderência ao Plano de Disciplina, Carga Horária, Índice de Didática, Histograma de Faixa de Satisfação e Comparativo de Score Pedagógico.
 
-
-4. Gestão de Cursos:
+4. **Gestão de Cursos:**
     - **Foco Analítico:** Análise da estrutura curricular, apoio e resultados por unidade
-
     - **Indicadores-Chave:** Interdisciplinaridade, Satisfação com Atendimento e Apoio, Taxa de Visibilidade de Apoio, Ranking de Satisfação por Setor e Gráfico de Dispersão (Score x Volume de Respostas).
 
-
-5. Clima Institucional:
+5. **Clima Institucional:**
     - **Foco Analítico:** Percepção dos servidores sobre gestão e infraestrutura.
-
     - **Indicadores-Chave:** Score de Transparência (RH/Movimentação), Índice de Segurança/Infraestrutura, Gap de Comunicação (Familiaridade com PDE), Ranking de Satisfação dos Servidores e Polarização de Opiniões (Net Score).
+
+## Estrutura do Projeto
+
+```
+hackathon-ufpr-dados-2025/
+├── app.py                      # Ponto de entrada da aplicação
+├── data/                       # Dados CSV/Excel/PDF
+├── storage/                    # Índice vetorial persistido
+├── tests/                      # Scripts de teste
+│   ├── test_rag_system.py      # Testa análise de dados
+│   ├── test_auto_join.py       # Testa auto-join de nomes
+│   └── test_llm.py             # Testa conexão com LLM
+├── src/
+│   ├── main.py                 # Configuração principal
+│   ├── components/             # Componentes da UI
+│   │   ├── chat.py             # Interface do chat
+│   │   └── dashboards/         # Dashboards analíticos
+│   ├── services/
+│   │   ├── rag_engine.py       # Motor RAG híbrido
+│   │   ├── data_tools.py       # Ferramentas de análise
+│   │   └── table_metadata.py   # Metadados das tabelas
+│   └── utils/
+│       └── generate_index.py   # Geração do índice vetorial
+├── docker-compose.yml
+├── Dockerfile
+└── README.md
+```
+
+## Tecnologias Utilizadas
+
+- **Frontend:** Streamlit
+- **LLM:** Google Gemini 2.5 Flash Live
+- **Embeddings:** Google Text Embedding 004
+- **Framework RAG:** LlamaIndex
+- **Análise de Dados:** Pandas
+- **Containerização:** Docker
+

@@ -33,12 +33,13 @@ def check_password():
 def main():
     st.set_page_config(
         page_title="Hackathon Dados UFPR 2025 - Equipe ITAPE",
-        page_icon="📈",
+        page_icon="📊",
         layout="wide"
     )
 
-    # if not check_password():
-    #     st.stop()
+    if os.getenv("prod") == "true":
+        if not check_password():
+            st.stop()
 
     col1, col2 = st.columns([2, 1])
 
@@ -46,7 +47,6 @@ def main():
         render_dashboard()
 
     with col2:
-        # st.subheader("Chat")
         render_chat()
 
 if __name__ == "__main__":

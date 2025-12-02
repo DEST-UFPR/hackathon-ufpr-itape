@@ -6,11 +6,12 @@ services:
     ports:
       - "8501:8501"
     environment:
-      - GOOGLE_API_KEY=<GOOGLE_API_KEY>
+      - GOOGLE_API_KEY=AIzaSyBRsNqUHbQQE6pPlMyGq9MJwLwdjY_QKv8
       - STREAMLIT_SERVER_ENABLE_CORS=true 
       - STREAMLIT_SERVER_ENABLE_WEBSOCKETS=true 
       - STREAMLIT_SERVER_HEADLESS=true 
       - STREAMLIT_SERVER_PORT=8501 
+      - prod=false
     volumes:
       - ./data:/app/data
       - ./storage:/app/storage
