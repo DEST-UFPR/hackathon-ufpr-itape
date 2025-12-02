@@ -2,6 +2,7 @@ import streamlit as st
 from src.components.dashboard import render_dashboard
 from src.components.chat import render_chat
 from dotenv import load_dotenv
+import os
 
 # Load environment variables
 load_dotenv()

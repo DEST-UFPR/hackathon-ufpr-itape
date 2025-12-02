@@ -28,8 +28,18 @@ def generate_index_terminal():
         return
 
     if os.path.exists(STORAGE_DIR):
-        print(f"Removing existing storage at {STORAGE_DIR}...")
-        shutil.rmtree(STORAGE_DIR)
+        print(f"Clearing existing storage at {STORAGE_DIR}...")
+        try:
+            for item in os.listdir(STORAGE_DIR):
+                item_path = os.path.join(STORAGE_DIR, item)
+                if os.path.isfile(item_path) or os.path.islink(item_path):
+                    os.unlink(item_path)
+                elif os.path.isdir(item_path):
+                    shutil.rmtree(item_path)
+            print(f"Storage cleared successfully")
+        except Exception as e:
+            print(f"Warning: Could not clear storage: {e}")
+            print("Continuing with existing storage...")
 
     documents = []
     files = [f for f in os.listdir(DATA_DIR) if f.endswith(('.xlsx', '.xls', '.csv', '.pdf', '.md'))]

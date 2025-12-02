@@ -49,9 +49,17 @@ def get_vector_index():
             gc.collect() 
             return index
         except Exception as e:
-            st.warning(f"Failed to load from storage: {e}. Re-indexing...")
+            # Silently clear storage and re-index
             if os.path.exists(STORAGE_DIR):
-                shutil.rmtree(STORAGE_DIR)
+                try:
+                    for item in os.listdir(STORAGE_DIR):
+                        item_path = os.path.join(STORAGE_DIR, item)
+                        if os.path.isfile(item_path) or os.path.islink(item_path):
+                            os.unlink(item_path)
+                        elif os.path.isdir(item_path):
+                            shutil.rmtree(item_path)
+                except Exception:
+                    pass  # Silently continue
         
     index = VectorStoreIndex([])
     
@@ -434,7 +442,8 @@ Comece analisando a pergunta do usuário, verificando o contexto fornecido, e es
             tools=all_tools,
             llm=Settings.llm,
             verbose=True,
-            max_iterations=10
+            max_iterations=10,
+            system_prompt=system_prompt
         )
         
         return agent

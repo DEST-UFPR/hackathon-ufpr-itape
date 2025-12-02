@@ -47,9 +47,6 @@ def render_chat():
         for message in st.session_state.messages:
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
-                
-                if "metadata" in message and "tool_used" in message["metadata"]:
-                    st.caption(f"Ferramenta: {message['metadata']['tool_used']}")
 
     prompt = st.chat_input("Pergunte sobre os dados da avaliação...")
     
@@ -64,31 +61,30 @@ def render_chat():
                 with st.chat_message("assistant"):
                     message_placeholder = st.empty()
                     full_response = ""
-                    tool_used = "unknown"
                     
                     try:
                         context_msg = ""
                         if "active_tab_context" in st.session_state:
-                            context_msg = f"\n\n--- CONTEXTO DA TELA ATUAL (use se relevante) ---\n{st.session_state['active_tab_context']}\n-----------------------------------------\n\n"
+                            context = st.session_state['active_tab_context']
+                            if len(context) > 8000:
+                                context = context[:8000] + "\n\n[Contexto truncado devido ao tamanho...]"
+                            context_msg = f"\n\n--- CONTEXTO DA TELA ATUAL (use se relevante) ---\n{context}\n-----------------------------------------\n\n"
                         
                         final_prompt = f"{context_msg}Pergunta do usuário: {prompt}"
                         
                         with st.spinner("Analisando e escolhendo ferramentas..."):
                             response = run_async(run_agent_query(chat_engine, final_prompt))
                         
+                        # Check if response is valid
+                        if response is None or str(response).strip() == "":
+                            raise ValueError("O modelo retornou uma resposta vazia. Tente reformular sua pergunta.")
+                        
                         full_response = str(response)
-                        
-                        if hasattr(response, 'source_nodes') and response.source_nodes:
-                            tool_used = "semantic_search"
-                        else:
-                            tool_used = "data_analysis"
-                        
                         message_placeholder.markdown(full_response)
                         
                         st.session_state.messages.append({
                             "role": "assistant", 
-                            "content": full_response,
-                            # "metadata": {"tool_used": tool_used}
+                            "content": full_response
                         })
                         
                     except Exception as e:
