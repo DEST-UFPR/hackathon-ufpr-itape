@@ -2,8 +2,10 @@ import os
 import google.generativeai as genai
 import streamlit as st
 
+from src.utils.key_manager import get_decrypted_key
+
 def get_available_models():
-    api_key = os.getenv("GOOGLE_API_KEY")
+    api_key = get_decrypted_key()
     if not api_key:
         return []
 

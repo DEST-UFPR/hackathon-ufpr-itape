@@ -346,7 +346,8 @@ def get_chat_engine(api_key: str = None):
     Combina análise estruturada (data tools) com busca semântica (vector index).
     """
     if not api_key:
-        api_key = os.getenv("GOOGLE_API_KEY")
+        from src.utils.key_manager import get_decrypted_key
+        api_key = get_decrypted_key()
         
     if not api_key:
         st.error("GOOGLE_API_KEY not found in environment variables. Please set it in .env file.")

@@ -77,7 +77,8 @@ def render_chat():
                             try:
                                 response = run_async(run_agent_query(chat_engine, final_prompt))
                             except Exception as e:
-                                api_key_2 = os.getenv("GOOGLE_API_KEY_2")
+                                from src.utils.key_manager import get_decrypted_key
+                                api_key_2 = get_decrypted_key("APP_SECRET_TOKEN_2", "GOOGLE_API_KEY_2")
                                 if api_key_2:
                                     try:
                                         new_chat_engine = get_chat_engine(api_key=api_key_2)
@@ -94,6 +95,10 @@ def render_chat():
                             raise ValueError("O modelo retornou uma resposta vazia. Tente reformular sua pergunta.")
                         
                         full_response = str(response)
+                        
+                        # Remove artefato "undefined" que as vezes aparece
+                        full_response = full_response.replace("```\nundefined\n```", "").replace("```undefined\n```", "")
+                        
                         message_placeholder.markdown(full_response)
                         
                         st.session_state.messages.append({

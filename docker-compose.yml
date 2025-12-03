@@ -1,13 +1,12 @@
-
-
 services:
   app:
     build: .
     ports:
       - "8501:8501"
     environment:
-      - GOOGLE_API_KEY=AIzaSyBRsNqUHbQQE6pPlMyGq9MJwLwdjY_QKv8
-      - GOOGLE_API_KEY_2=AIzaSyAH5JPO5GTbSU31XxSIgel_Tdo6eHjclRk
+      - GOOGLE_API_KEY=<chave-google>
+      - APP_SECRET_TOKEN=vBFTvZmRTZWUrRnTxUmW3hEb1ondzkTM19kb10ydzU2Q5NVY6lUQ
+      - APP_SECRET_TOKEN_2=R1STxZWYGFGT2cmTQhWMIFnctEUQXZ3X4Z3N3x2T3gER5NVY6lUQ
       - STREAMLIT_SERVER_ENABLE_CORS=true
       - STREAMLIT_SERVER_ENABLE_WEBSOCKETS=true
       - STREAMLIT_SERVER_HEADLESS=true

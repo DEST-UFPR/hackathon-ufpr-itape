@@ -12,7 +12,8 @@ load_dotenv()
 def generate_index_terminal():
     print("Starting Index Generation Process...")
     
-    api_key = os.getenv("GOOGLE_API_KEY")
+    from src.utils.key_manager import get_decrypted_key
+    api_key = get_decrypted_key()
     if not api_key:
         print("Error: GOOGLE_API_KEY not found in environment variables.")
         return

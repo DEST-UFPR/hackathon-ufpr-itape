@@ -12,6 +12,14 @@ Este projeto é uma aplicação Streamlit que combina um Dashboard de visualiza�
 - **Indexação Otimizada**: Processamento de arquivos com barra de progresso e estimativa de tempo (ETA).
 - **Persistência**: O índice é salvo em disco (`storage/`) para carregamento instantâneo nas próximas execuções.
 
+## Demonstração Online
+
+Você pode acessar e testar a aplicação rodando em nosso servidor de demonstração:
+
+| URL | Usuário | Senha |
+|---|---|---|
+| [**itape.wired.rs**](http://itape.wired.rs) | `admin` | `itape-ufpr` |
+
 ## Como Executar
 
 ### Rodando com Docker (Recomendado)
@@ -94,7 +102,8 @@ A pasta `storage/` é mapeada como um volume, então o índice gerado pela IA se
 
 2.  **Configurar variáveis de ambiente**:
     - Crie um arquivo `.env` na raiz do projeto
-    - Adicione sua chave de API: `GOOGLE_API_KEY=sua_chave_aqui`
+    - Gere seu token de segurança: `python encrypt_key.py`
+    - Adicione o token ao `.env`: `APP_SECRET_TOKEN=seu_token_gerado`
 
 3.  **Executar aplicação**:
     ```bash
