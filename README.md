@@ -12,14 +12,6 @@ Este projeto é uma aplicação Streamlit que combina um Dashboard de visualiza�
 - **Indexação Otimizada**: Processamento de arquivos com barra de progresso e estimativa de tempo (ETA).
 - **Persistência**: O índice é salvo em disco (`storage/`) para carregamento instantâneo nas próximas execuções.
 
-## Demonstração Online
-
-Você pode acessar e testar a aplicação rodando em nosso servidor de demonstração:
-
-| URL | Usuário | Senha |
-|---|---|---|
-| [**itape.wired.rs**](http://itape.wired.rs) | `admin` | `itape-ufpr` |
-
 ## Como Executar
 
 ### Rodando com Docker (Recomendado)
