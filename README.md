@@ -22,6 +22,44 @@ Esta aplicação está containerizada para facilitar a execução.
 - Docker e Docker Compose instalados.
 - Git LFS instalado (para baixar os arquivos de índice).
 
+#### Instalando o Docker (Ubuntu/Linux)
+
+Se você ainda não tem o Docker instalado, siga os passos abaixo ou consulte a [documentação oficial](https://docs.docker.com/engine/install/).
+
+1.  **Atualize os pacotes**:
+    ```bash
+    sudo apt-get update
+    sudo apt-get install ca-certificates curl gnupg
+    ```
+
+2.  **Adicione a chave GPG oficial do Docker**:
+    ```bash
+    sudo install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    sudo chmod a+r /etc/apt/keyrings/docker.gpg
+    ```
+
+3.  **Configure o repositório**:
+    ```bash
+    echo \
+      "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+      "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
+      sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    ```
+
+4.  **Instale o Docker Engine**:
+    ```bash
+    sudo apt-get update
+    sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    ```
+
+5.  **Verifique a instalação**:
+    ```bash
+    sudo docker run hello-world
+    ```
+
+> **Nota**: Para instalar no Windows ou Mac, baixe o [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+
 #### Passo a Passo
 
 1.  **Clone o repositório e baixe os arquivos grandes**:
