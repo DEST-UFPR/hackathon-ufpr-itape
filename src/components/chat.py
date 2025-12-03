@@ -1,4 +1,5 @@
 import streamlit as st
+import os
 import asyncio
 import nest_asyncio
 import inspect
@@ -73,7 +74,24 @@ def render_chat():
                         final_prompt = f"{context_msg}Pergunta do usuário: {prompt}"
                         
                         with st.spinner("Analisando e escolhendo ferramentas..."):
-                            response = run_async(run_agent_query(chat_engine, final_prompt))
+                            try:
+                                response = run_async(run_agent_query(chat_engine, final_prompt))
+                            except Exception as e:
+                                # Failover silencioso para a segunda chave
+                                api_key_2 = os.getenv("GOOGLE_API_KEY_2")
+                                if api_key_2:
+                                    try:
+                                        # Tenta reinicializar com a segunda chave
+                                        new_chat_engine = get_chat_engine(api_key=api_key_2)
+                                        if new_chat_engine:
+                                            response = run_async(run_agent_query(new_chat_engine, final_prompt))
+                                        else:
+                                            raise e
+                                    except Exception:
+                                        # Se falhar também com a segunda, levanta o erro original
+                                        raise e
+                                else:
+                                    raise e
                         
                         # Check if response is valid
                         if response is None or str(response).strip() == "":

@@ -75,9 +75,9 @@ def get_vector_index():
             documents = []
             if file.endswith('.csv'):
                 try:
-                    df = pd.read_csv(file_path, sep=None, engine='python', dtype=str, nrows=1000)  # Limit rows for semantic search
+                    df = pd.read_csv(file_path, sep=None, engine='python', dtype=str) 
                 except:
-                    df = pd.read_csv(file_path, sep=';', dtype=str, nrows=1000)
+                    df = pd.read_csv(file_path, sep=';', dtype=str)
             
                 df.columns = df.columns.str.replace('\ufeff', '').str.strip()
                 df = df.fillna("")
@@ -340,12 +340,14 @@ def create_analysis_tools(analyzer: DataAnalyzer):
     return tools
 
 
-def get_chat_engine():
+def get_chat_engine(api_key: str = None):
     """
     Inicializa e retorna o chat engine híbrido usando Gemini.
     Combina análise estruturada (data tools) com busca semântica (vector index).
     """
-    api_key = os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        api_key = os.getenv("GOOGLE_API_KEY")
+        
     if not api_key:
         st.error("GOOGLE_API_KEY not found in environment variables. Please set it in .env file.")
         return None
@@ -362,7 +364,11 @@ def get_chat_engine():
         all_tools = analysis_tools.copy()
         
         if vector_index:
-            query_engine = vector_index.as_query_engine(similarity_top_k=3)
+            query_engine = vector_index.as_query_engine(
+                similarity_top_k=3,
+                llm=Settings.llm,
+                embed_model=Settings.embed_model
+            )
             
             def semantic_search_tool(question: str) -> str:
                 """
