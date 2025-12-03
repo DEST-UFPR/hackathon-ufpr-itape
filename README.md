@@ -186,6 +186,11 @@ Foram desenvolvidos cinco dashboards interativos para facilitar a visualização
     - **Foco Analítico:** Percepção dos servidores sobre gestão e infraestrutura.
     - **Indicadores-Chave:** Score de Transparência (RH/Movimentação), Índice de Segurança/Infraestrutura, Gap de Comunicação (Familiaridade com PDE), Ranking de Satisfação dos Servidores e Polarização de Opiniões (Net Score).
 
+## Próximos Passos dos dados
+- Adição de Análise de Cluster para identificação de perfil de respondente
+- Detecção de Outliers com Isolation Forest
+
+
 ## Estrutura do Projeto
 
 ```

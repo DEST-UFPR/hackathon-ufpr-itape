@@ -39,9 +39,9 @@ def main():
         layout="wide"
     )
 
-    if os.getenv("prod") == "true":
-        if not check_password():
-            st.stop()
+    # if os.getenv("prod") == "true":
+    #     if not check_password():
+    #         st.stop()
 
     col1, col2 = st.columns([2, 1])
 

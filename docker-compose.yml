@@ -11,7 +11,7 @@ services:
       - STREAMLIT_SERVER_ENABLE_WEBSOCKETS=true
       - STREAMLIT_SERVER_HEADLESS=true
       - STREAMLIT_SERVER_PORT=8501
-      - prod=false
+      - prod=true
     volumes:
       - ./data:/app/data
       - ./storage:/app/storage
