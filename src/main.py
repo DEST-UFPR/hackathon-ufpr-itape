@@ -4,32 +4,33 @@ from src.components.chat import render_chat
 from dotenv import load_dotenv
 import os
 
-# Load environment variables
 load_dotenv()
 
 def check_password():
-
-    def password_entered():
-        if st.session_state.get("username") == "admin" and st.session_state.get("password") == "itape-ufpr":
-            st.session_state["password_correct"] = True
-            del st.session_state["password"]  
-            del st.session_state["username"]
-        else:
-            st.session_state["password_correct"] = False
-
-    if "password_correct" not in st.session_state:
-        st.text_input("Usuário", key="username")
-        st.text_input("Senha", type="password", on_change=password_entered, key="password")
-        st.button("Login", on_click=password_entered)
-        return False
-    elif not st.session_state["password_correct"]:
-        st.text_input("Usuário", key="username")
-        st.text_input("Senha", type="password", on_change=password_entered, key="password")
-        st.button("Login", on_click=password_entered)
-        st.error("Usuário ou senha incorretos")
-        return False
-    else:
+    if st.session_state.get("password_correct", False):
         return True
+
+
+    with st.form("login_form"):
+        st.text_input("Usuário", key="username")
+        st.text_input("Senha", type="password", key="password")
+        submitted = st.form_submit_button("Login")
+
+    if submitted:
+
+        username = st.session_state.get("username", "").strip()
+        password = st.session_state.get("password", "").strip()
+        
+        if username == "admin" and password == "itape-ufpr":
+            st.session_state["password_correct"] = True
+
+            if "username" in st.session_state: del st.session_state["username"]
+            if "password" in st.session_state: del st.session_state["password"]
+            st.rerun()
+        else:
+            st.error("Usuário ou senha incorretos")
+            
+    return False
 
 def main():
     st.set_page_config(
