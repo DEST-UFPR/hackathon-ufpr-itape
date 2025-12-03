@@ -10,7 +10,7 @@ load_dotenv()
 def check_password():
 
     def password_entered():
-        if st.session_state["username"] == "admin" and st.session_state["password"] == "itape-ufpr":
+        if st.session_state.get("username") == "admin" and st.session_state.get("password") == "itape-ufpr":
             st.session_state["password_correct"] = True
             del st.session_state["password"]  
             del st.session_state["username"]
