@@ -3,6 +3,7 @@ import os
 import asyncio
 import nest_asyncio
 import inspect
+import re
 from src.services.rag_engine import get_chat_engine
 
 nest_asyncio.apply()
@@ -36,9 +37,17 @@ def render_chat():
         st.session_state.messages = []
 
     chat_engine = None
+    
+    from llama_index.core.llms import ChatMessage, MessageRole
+    
+    chat_history = []
+    for msg in st.session_state.messages:
+        role = MessageRole.USER if msg["role"] == "user" else MessageRole.ASSISTANT
+        chat_history.append(ChatMessage(role=role, content=msg["content"]))
+    
     with st.spinner("Preparando assistente..."):
         try:
-            chat_engine = get_chat_engine()
+            chat_engine = get_chat_engine(chat_history=chat_history)
         except Exception as e:
             st.error(f"Erro ao inicializar: {str(e)}")
 
@@ -67,9 +76,9 @@ def render_chat():
                         context_msg = ""
                         if "active_tab_context" in st.session_state:
                             context = st.session_state['active_tab_context']
-                            if len(context) > 8000:
-                                context = context[:8000] + "\n\n[Contexto truncado devido ao tamanho...]"
-                            context_msg = f"\n\n--- CONTEXTO DA TELA ATUAL (use se relevante) ---\n{context}\n-----------------------------------------\n\n"
+                            if len(context) > 30000:
+                                context = context[:30000] + "\n\n[Contexto truncado devido ao tamanho...]"
+                            context_msg = f"\n\n--- CONTEXTO DOS DASHBOARDS (use se relevante) ---\n{context}\n-----------------------------------------\n\n"
                         
                         final_prompt = f"{context_msg}Pergunta do usuário: {prompt}"
                         
@@ -81,7 +90,7 @@ def render_chat():
                                 api_key_2 = get_decrypted_key("APP_SECRET_TOKEN_2", "GOOGLE_API_KEY_2")
                                 if api_key_2:
                                     try:
-                                        new_chat_engine = get_chat_engine(api_key=api_key_2)
+                                        new_chat_engine = get_chat_engine(api_key=api_key_2, chat_history=chat_history)
                                         if new_chat_engine:
                                             response = run_async(run_agent_query(new_chat_engine, final_prompt))
                                         else:
@@ -96,9 +105,8 @@ def render_chat():
                         
                         full_response = str(response)
                         
-                        # Remove artefato "undefined" que as vezes aparece
-                        full_response = full_response.replace("```\nundefined\n```", "").replace("```undefined\n```", "")
-                        
+                        full_response = re.sub(r'```\w*\n?undefined\n?```', '', full_response, flags=re.IGNORECASE)
+                        full_response = full_response.replace("undefined", "") 
                         message_placeholder.markdown(full_response)
                         
                         st.session_state.messages.append({

@@ -63,7 +63,8 @@ def get_vector_index():
         
     index = VectorStoreIndex([])
     
-    files = [f for f in os.listdir(DATA_DIR) if f.endswith(('.xlsx', '.xls', '.csv', '.pdf', '.md'))]
+    # OTIMIZAÇÃO: Indexar apenas arquivos não estruturados (texto/PDF) para busca conceitual.
+    files = [f for f in os.listdir(DATA_DIR) if f.endswith(('.pdf', '.md', '.txt'))]
     
     progress_bar = st.progress(0)
     status_text = st.empty()
@@ -340,7 +341,7 @@ def create_analysis_tools(analyzer: DataAnalyzer):
     return tools
 
 
-def get_chat_engine(api_key: str = None):
+def get_chat_engine(api_key: str = None, chat_history: list = None):
     """
     Inicializa e retorna o chat engine híbrido usando Gemini.
     Combina análise estruturada (data tools) com busca semântica (vector index).
@@ -450,7 +451,8 @@ Comece analisando a pergunta do usuário, verificando o contexto fornecido, e es
             llm=Settings.llm,
             verbose=True,
             max_iterations=10,
-            system_prompt=system_prompt
+            system_prompt=system_prompt,
+            chat_history=chat_history if chat_history else []
         )
         
         return agent

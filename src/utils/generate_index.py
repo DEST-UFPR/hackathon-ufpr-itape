@@ -43,7 +43,8 @@ def generate_index_terminal():
             print("Continuing with existing storage...")
 
     documents = []
-    files = [f for f in os.listdir(DATA_DIR) if f.endswith(('.xlsx', '.xls', '.csv', '.pdf', '.md'))]
+    
+    files = [f for f in os.listdir(DATA_DIR) if f.endswith(('.pdf', '.md', '.txt'))]
     
     print(f"Found {len(files)} files to process.")
 

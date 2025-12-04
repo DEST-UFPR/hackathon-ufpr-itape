@@ -1,7 +1,6 @@
 import streamlit as st
 import os
 import pandas as pd
-
 import plotly.express as px
 
 def load_data(file_name):
@@ -40,49 +39,37 @@ def render_dashboard():
 
     df_cursos, df_inst, df_disc, df_perguntas, df_dim_disc, df_dim_cursos, df_tipo_sinaes = load_dataframes()
 
-    tabs = ["Visão Geral da Avaliação", "Eixos SINAES", "Qualidade de Ensino", "Gestão de cursos", "Clima institucional", "Explorador de Arquivos Brutos"]
+    tabs_names = ["Visão Geral da Avaliação", "Eixos SINAES", "Qualidade de Ensino", "Gestão de cursos", "Clima institucional", "Explorador de Arquivos Brutos"]
     
-    if "selected_tab" not in st.session_state:
-        st.session_state.selected_tab = tabs[0]
+    tab_overview, tab_sinaes, tab_teaching, tab_courses, tab_climate, tab_explorer = st.tabs(tabs_names)
 
-    selected_tab = st.radio(
-        "Navegação", 
-        tabs, 
-        horizontal=True, 
-        label_visibility="collapsed",
-        key="dashboard_tab_nav"
-    )
+    context_accumulator = []
 
     def update_ai_context(tab_name, data_dict, additional_info=""):
         """
-        Atualiza o contexto da IA com informações da tela atual.
-        
-        Args:
-            tab_name: Nome da aba/dashboard atual
-            data_dict: Dicionário com dados resumidos
-            additional_info: Informações adicionais (definições, explicações)
+        Adiciona informações ao contexto global da IA.
         """
-        context = f"O usuário está visualizando a aba: '{tab_name}'.\\n"
-        context += "Aqui estão os dados resumidos e processados visíveis nesta tela:\\n\\n"
+        context = f"### Dashboard: '{tab_name}'\n"
+        context += "Dados resumidos desta seção:\n\n"
         
         for name, data in data_dict.items():
             if isinstance(data, pd.DataFrame):
-                
-                if len(data) > 50:
-                    context += f"### Tabela: {name} (Top 50 linhas)\\n"
-                    context += data.head(50).to_markdown(index=False)
+                if len(data) > 20: 
+                    context += f"#### Tabela: {name} (Top 20 linhas)\n"
+                    context += data.head(20).to_markdown(index=False)
                 else:
-                    context += f"### Tabela: {name}\\n"
+                    context += f"#### Tabela: {name}\n"
                     context += data.to_markdown(index=False)
             else:
-                context += f"- **{name}**: {data}\\n"
+                context += f"- **{name}**: {data}\n"
         
         if additional_info:
-            context += "\\n" + additional_info
+            context += "\n" + additional_info
         
-        st.session_state['active_tab_context'] = context
+        context += "\n---\n"
+        context_accumulator.append(context)
 
-    if selected_tab == tabs[0]:
+    with tab_overview:
         st.subheader("Visão Geral da Avaliação")
         
         if df_cursos is not None and df_inst is not None and df_disc is not None and df_perguntas is not None:
@@ -186,49 +173,18 @@ def render_dashboard():
                     st.plotly_chart(fig_bottom, width="stretch")
                 
                 visao_geral_context = f"""
-
 DEFINIÇÕES DOS INDICADORES DA VISÃO GERAL:
-
-1. **Satisfação Média Geral** ({satisfacao_geral:.2f}%):
-   - Cálculo: % de respostas "Concordo" sobre total de respostas válidas (Concordo + Discordo)
-   - Considera todas as avaliações: Cursos, Institucional e Disciplinas
-   - Indicador principal de aprovação geral
-
-2. **Gap de Comunicação** ({gap_desconhecimento:.2f}%):
-   - Cálculo: % de respostas "Desconheço" sobre total de todas as respostas
-   - Indica falta de conhecimento/informação sobre temas avaliados
-   - Gap alto sugere necessidade de melhor comunicação institucional
-
-3. **Engajamento Total** ({len(df_fatos)} respostas):
-   - Soma de todas as respostas coletadas
-   - Distribuição:
-     * Avaliação de Cursos: {count_cursos:,} respostas
-     * Avaliação Institucional: {count_inst:,} respostas
-     * Avaliação de Disciplinas: {count_disc:,} respostas
-
-4. **Destaques de Excelência**:
-   - Tipos de avaliação com maior satisfação
-   - Identifica pontos fortes da instituição
-
-5. **Pontos de Risco Crítico**:
-   - Tipos de avaliação com maior discordância
-   - Identifica áreas que necessitam atenção urgente
-
-INTERPRETAÇÃO:
-- Satisfação >80%: Excelente
-- Satisfação 60-80%: Bom
-- Satisfação <60%: Necessita melhorias
-- Gap >30%: Problema crítico de comunicação
-- Gap 15-30%: Comunicação precisa melhorar
-- Gap <15%: Comunicação adequada
+1. **Satisfação Média Geral** ({satisfacao_geral:.2f}%): % de respostas "Concordo" sobre total de respostas válidas.
+2. **Gap de Comunicação** ({gap_desconhecimento:.2f}%): % de respostas "Desconheço".
+3. **Engajamento Total**: {len(df_fatos)} respostas.
 """
                 
                 update_ai_context("Visão Geral da Avaliação", {
-                    "Satisfação Global": f"{satisfacao_geral:.2f}% (Percentual de respostas 'Concordo' sobre o total de respostas válidas)",
-                    "Gap de Comunicação": f"{gap_desconhecimento:.2f}% (Percentual de respostas 'Desconheço' sobre o total de respostas)",
-                    "Engajamento Total": f"{len(df_fatos)} (Número total de respostas coletadas somando Avaliação de Cursos, Institucional e Disciplinas)",
-                    "Destaques de Excelência": df_sorted_sat[['TIPO_AVALIACAO', 'satisfacao']].head(5),
-                    "Pontos de Risco": df_sorted_disc[['TIPO_AVALIACAO', 'discordancia']].head(5)
+                    "Satisfação Global": f"{satisfacao_geral:.2f}%",
+                    "Gap de Comunicação": f"{gap_desconhecimento:.2f}%",
+                    "Engajamento Total": f"{len(df_fatos)}",
+                    "Destaques": df_sorted_sat[['TIPO_AVALIACAO', 'satisfacao']].head(5),
+                    "Riscos": df_sorted_disc[['TIPO_AVALIACAO', 'discordancia']].head(5)
                 }, additional_info=visao_geral_context)
 
             else:
@@ -236,7 +192,7 @@ INTERPRETAÇÃO:
         else:
             st.error("Arquivos de dados necessários (FATOs ou DIM_PERGUNTAS) não encontrados.")
     
-    elif selected_tab == tabs[1]:
+    with tab_sinaes:
         st.subheader("Eixos SINAES")
         
         if df_cursos is not None and df_inst is not None and df_disc is not None and df_perguntas is not None and df_tipo_sinaes is not None:
@@ -260,9 +216,7 @@ INTERPRETAÇÃO:
                 df_sinaes = df_sinaes[df_sinaes['DIM_SINAES'] != '']
                 
                 total_types = df_tipo_sinaes['Tipo_Perg'].nunique()
-                
                 evaluated_types = df_sinaes['Tipo_Pergunta'].nunique()
-                
                 absent_types = max(0, total_types - evaluated_types)
                 
                 col_cov, col_axis = st.columns([1, 2])
@@ -316,66 +270,16 @@ INTERPRETAÇÃO:
                                   range_color=[50, 100]) 
                 fig_dim.update_layout(xaxis_range=[0, 100], height=500)
                 st.plotly_chart(fig_dim, width="stretch")
-
-                all_types = set(df_tipo_sinaes['Tipo_Perg'].unique())
-                evaluated_types_set = set(df_sinaes['Tipo_Pergunta'].unique())
-                missing_types_set = all_types - evaluated_types_set
-                
-                missing_types_list = []
-                if 'Descricao' in df_tipo_sinaes.columns:
-                    for tipo in missing_types_set:
-                        desc_row = df_tipo_sinaes[df_tipo_sinaes['Tipo_Perg'] == tipo]
-                        if not desc_row.empty:
-                            desc = desc_row.iloc[0]['Descricao']
-                            missing_types_list.append(f"{tipo}: {desc}")
-                        else:
-                            missing_types_list.append(tipo)
-                else:
-                    missing_types_list = list(missing_types_set)
                 
                 sinaes_context = f"""
-
-DEFINIÇÕES DOS INDICADORES SINAES:
-
-1. **Índice de Cobertura das Dimensões SINAES**:
-   - Total de tipos de perguntas SINAES: {total_types}
-   - Tipos avaliados: {evaluated_types} ({evaluated_types/total_types*100:.1f}%)
-   - Tipos ausentes: {absent_types} ({absent_types/total_types*100:.1f}%)
-   - Mede a abrangência da avaliação institucional
-
-2. **Tipos SINAES Ausentes** (não avaliados):
-{chr(10).join(['   - ' + str(t) for t in sorted(missing_types_list)]) if missing_types_list else '   - Nenhum tipo ausente'}
-
-   **Por que estão ausentes?**
-   - Esses tipos de perguntas não foram incluídos nos questionários aplicados
-   - Podem representar dimensões que a instituição optou por não avaliar neste ciclo
-   - Ou podem ser dimensões que serão avaliadas em ciclos futuros
-
-3. **Score de Aprovação Líquida por Eixo SINAES**:
-   - Cálculo: % de respostas "Concordo" sobre total de respostas válidas (Concordo + Discordo)
-   - Mostra a satisfação geral em cada um dos 5 eixos avaliativos do SINAES
-
-4. **Score de Aprovação por Dimensão SINAES**:
-   - Detalhamento mais granular dentro de cada eixo
-   - Permite identificar dimensões específicas com melhor/pior desempenho
-
-OS 5 EIXOS SINAES:
-- Eixo 1: Planejamento e Avaliação Institucional
-- Eixo 2: Desenvolvimento Institucional
-- Eixo 3: Políticas Acadêmicas
-- Eixo 4: Políticas de Gestão
-- Eixo 5: Infraestrutura Física
-
-INTERPRETAÇÃO:
-- Score alto (>80%): Boa conformidade com padrões SINAES
-- Score médio (60-80%): Conformidade adequada, mas com espaço para melhorias
-- Score baixo (<60%): Necessita atenção e ações corretivas
+DEFINIÇÕES SINAES:
+- Cobertura: {evaluated_types}/{total_types} tipos avaliados.
+- Score por Eixo: Média de satisfação nos 5 eixos.
 """
-                
                 update_ai_context("Eixos SINAES", {
-                    "Índice de Cobertura": df_coverage,
-                    "Score por Eixo": df_axis_score,
-                    "Score por Dimensão": df_dim_score
+                    "Cobertura": df_coverage,
+                    "Score Eixo": df_axis_score,
+                    "Score Dimensão": df_dim_score
                 }, additional_info=sinaes_context)
                 
             else:
@@ -383,7 +287,7 @@ INTERPRETAÇÃO:
         else:
             st.warning("Dados necessários não carregados.")
     
-    elif selected_tab == tabs[2]:
+    with tab_teaching:
         st.subheader("Qualidade de Ensino")
         
         if df_disc is not None and df_perguntas is not None:
@@ -412,13 +316,11 @@ INTERPRETAÇÃO:
 
             col_c1, col_c2 = st.columns(2)
 
-            
             df_hist_source = df_disc[df_disc['ID_PERGUNTA'].isin(didatica_ids)].copy()
-            
             disc_col = 'COD_DISCIPLINA' if 'COD_DISCIPLINA' in df_hist_source.columns else 'ID_DISCIPLINA'
             
+            df_hist = None
             if disc_col in df_hist_source.columns:
-                
                 df_hist_source['is_concordo'] = (df_hist_source['RESPOSTA'] == 'Concordo').astype(int)
                 df_hist_source['is_discordo'] = (df_hist_source['RESPOSTA'] == 'Discordo').astype(int)
                 
@@ -460,8 +362,6 @@ INTERPRETAÇÃO:
             
             with col_c2:
                 st.markdown("#### Comparativo de Score por Aspecto Pedagógico")
-               
-                
                 fig_aspects = px.bar(df_aspects, x='Score', y='Aspecto', orientation='h',
                                      text_auto='.1f',
                                      title="Score por Aspecto",
@@ -471,69 +371,20 @@ INTERPRETAÇÃO:
                 st.plotly_chart(fig_aspects, width="stretch")
 
             context_data = {
-                "Aderência ao Plano": f"{score_aderencia:.1f}%",
-                "Carga Horária": f"{score_carga:.1f}%",
-                "Índice de Didática": f"{score_didatica:.1f}%",
-                "Score por Aspecto": df_aspects
+                "Aderência": f"{score_aderencia:.1f}%",
+                "Carga": f"{score_carga:.1f}%",
+                "Didática": f"{score_didatica:.1f}%",
+                "Aspectos": df_aspects
             }
-            if 'df_hist' in locals():
-                context_data["Distribuição da Qualidade"] = df_hist
+            if df_hist is not None:
+                context_data["Distribuição"] = df_hist
             
-            context_definitions = """
-            
-DEFINIÇÕES DOS INDICADORES DA QUALIDADE DE ENSINO:
-
-1. **Aderência ao Plano de Disciplina** ({aderencia}%):
-   - Mede se o conteúdo ministrado seguiu o plano de ensino
-   - Baseado na pergunta ID 1733
-   - Cálculo: % de respostas "Concordo" sobre total de respostas válidas (Concordo + Discordo)
-
-2. **Carga Horária** ({carga}%):
-   - Avalia se a carga horária foi adequada
-   - Baseado na pergunta ID 1734
-   - Cálculo: % de respostas "Concordo" sobre total de respostas válidas
-
-3. **Índice de Didática** ({didatica}%):
-   - Indicador composto que avalia a qualidade pedagógica geral
-   - Baseado em 6 perguntas (IDs: 1732, 1735, 1736, 1743, 1746, 1750)
-   - Engloba: clareza, metodologia, recursos didáticos, interação
-   - Cálculo: % de respostas "Concordo" sobre total de respostas válidas de todas as 6 perguntas
-
-4. **Aspectos Pedagógicos Detalhados**:
-   
-   a) **Metodologia** ({metodologia}%):
-      - Perguntas IDs: 1736, 1743
-      - Avalia métodos de ensino e estratégias pedagógicas
-      
-   b) **Conteúdo** ({conteudo}%):
-      - Perguntas IDs: 1735, 1767
-      - Avalia qualidade e relevância do conteúdo
-      
-   c) **Avaliação** ({avaliacao}%):
-      - Perguntas IDs: 1737, 1744, 1748, 1762
-      - Avalia critérios e processos avaliativos
-
-COMO INTERPRETAR:
-- 95-100%: Excelência
-- 90-95%: Ótimo
-- 80-90%: Bom
-- 70-80%: Regular
-- 50-70%: Ruim
-- <50%: Crítico
-""".format(
-                aderencia=f"{score_aderencia:.1f}",
-                carga=f"{score_carga:.1f}",
-                didatica=f"{score_didatica:.1f}",
-                metodologia=df_aspects[df_aspects['Aspecto'] == 'Metodologia']['Score'].values[0] if not df_aspects[df_aspects['Aspecto'] == 'Metodologia'].empty else 0,
-                conteudo=df_aspects[df_aspects['Aspecto'] == 'Conteúdo']['Score'].values[0] if not df_aspects[df_aspects['Aspecto'] == 'Conteúdo'].empty else 0,
-                avaliacao=df_aspects[df_aspects['Aspecto'] == 'Avaliação']['Score'].values[0] if not df_aspects[df_aspects['Aspecto'] == 'Avaliação'].empty else 0
-            )
-            
-            update_ai_context("Qualidade de Ensino", context_data, additional_info=context_definitions)
+            update_ai_context("Qualidade de Ensino", context_data)
 
         else:
             st.warning("Arquivos necessários (FATO_AVDISCIPLINAS.csv, DIM_PERGUNTAS.csv) não encontrados.")
-    elif selected_tab == tabs[3]:
+
+    with tab_courses:
         st.subheader("Gestão de cursos")
         
         if df_cursos is not None and df_disc is not None:
@@ -544,14 +395,12 @@ COMO INTERPRETAR:
                 total = concordo + discordo
                 return (concordo / total * 100) if total > 0 else 0.0
 
-            
             df_inter = df_cursos[df_cursos['ID_PERGUNTA'] == '1942']
             score_inter = calc_score(df_inter)
 
             df_apoio = df_cursos[df_cursos['ID_PERGUNTA'] == '1957']
             score_apoio = calc_score(df_apoio)
             
-
             df_vis = df_cursos[df_cursos['ID_PERGUNTA'] == '1820']
             if not df_vis.empty:
                 total_vis = len(df_vis)
@@ -564,7 +413,6 @@ COMO INTERPRETAR:
             col1.metric("Índice de Interdisciplinaridade", f"{score_inter:.1f}%")
             col2.metric("Satisfação com Atend. e Apoio", f"{score_apoio:.1f}%")
             col3.metric("Taxa de Visibilidade de Apoio", f"{taxa_visibilidade:.1f}%")
-            
             
             if 'COD_CURSO' in df_disc.columns and df_dim_cursos is not None:
 
@@ -611,10 +459,10 @@ COMO INTERPRETAR:
                     st.plotly_chart(fig_scatter, width="stretch")
                     
                     update_ai_context("Gestão de cursos", {
-                        "Índice de Interdisciplinaridade": f"{score_inter:.1f}%",
-                        "Satisfação com Apoio": f"{score_apoio:.1f}%",
-                        "Taxa de Visibilidade": f"{taxa_visibilidade:.1f}%",
-                        "Dados do Gráfico de Dispersão (Score vs Volume) e Ranking": df_sorted_sector[['SETOR_CURSO', 'satisfacao', 'total_valid']].head(20),
+                        "Interdisciplinaridade": f"{score_inter:.1f}%",
+                        "Apoio": f"{score_apoio:.1f}%",
+                        "Visibilidade": f"{taxa_visibilidade:.1f}%",
+                        "Ranking Setores": df_sorted_sector[['SETOR_CURSO', 'satisfacao', 'total_valid']].head(20),
                         "Média Geral": f"{global_mean:.2f}%"
                     })
 
@@ -623,14 +471,14 @@ COMO INTERPRETAR:
             else:
                 st.warning("Dados de Disciplinas ou Cursos (DIM) não carregados ou coluna COD_CURSO ausente.")
                 update_ai_context("Gestão de cursos", {
-                    "Índice de Interdisciplinaridade": f"{score_inter:.1f}%",
-                    "Satisfação com Apoio": f"{score_apoio:.1f}%",
-                    "Taxa de Visibilidade": f"{taxa_visibilidade:.1f}%"
+                    "Interdisciplinaridade": f"{score_inter:.1f}%",
+                    "Apoio": f"{score_apoio:.1f}%",
+                    "Visibilidade": f"{taxa_visibilidade:.1f}%"
                 })
         else:
             st.warning("Dados necessários não carregados.")
     
-    elif selected_tab == tabs[4]:
+    with tab_climate:
         st.subheader("Clima institucional (dos professores)")
         
         if df_inst is not None:
@@ -641,15 +489,12 @@ COMO INTERPRETAR:
                 total = concordo + discordo
                 return (concordo / total * 100) if total > 0 else 0.0
 
-            
             df_transp = df_inst[df_inst['ID_PERGUNTA'] == '2005']
             score_transp = calc_score(df_transp)
             
             df_seg = df_inst[df_inst['ID_PERGUNTA'] == '2013']
             score_seg = calc_score(df_seg)
             
-
- 
             df_gap = df_inst[df_inst['ID_PERGUNTA'] == '1984']
             score_gap = calc_score(df_gap)
             
@@ -657,8 +502,6 @@ COMO INTERPRETAR:
             col1.metric("Score de Transparência (RH/Movimentação)", f"{score_transp:.1f}%")
             col2.metric("Índice de Segurança/Infraestrutura", f"{score_seg:.1f}%")
             col3.metric("Gap de Comunicação (Familiaridade com o PDE)", f"{score_gap:.1f}%")
-            
-            
             
             st.markdown("#### Ranking de Satisfação dos Servidores por Unidade")
             if 'SIGLA_LOTACAO' in df_inst.columns:
@@ -670,7 +513,6 @@ COMO INTERPRETAR:
                 df_unit['satisfacao'] = df_unit.apply(
                     lambda x: (x['is_concordo'] / x['total_valid'] * 100) if x['total_valid'] > 0 else 0, axis=1
                 )
-                
                 
                 df_top_unit = df_unit.sort_values('satisfacao', ascending=True).tail(10)
                 
@@ -718,8 +560,8 @@ COMO INTERPRETAR:
             st.plotly_chart(fig_pol, width="stretch")
 
             ctx_data = {
-                "Score Transparência": f"{score_transp:.1f}%",
-                "Score Segurança": f"{score_seg:.1f}%",
+                "Transparência": f"{score_transp:.1f}%",
+                "Segurança": f"{score_seg:.1f}%",
                 "Gap Comunicação": f"{score_gap:.1f}%",
                 "Polarização": df_pol
             }
@@ -731,7 +573,7 @@ COMO INTERPRETAR:
         else:
             st.warning("Dados Institucionais não carregados.")
 
-    elif selected_tab == tabs[5]:
+    with tab_explorer:
         st.subheader("Explorador de Arquivos Brutos")
 
         data_dir = "data"
@@ -746,9 +588,10 @@ COMO INTERPRETAR:
                     st.table(df_raw.head(20).astype(str))
                     
                     update_ai_context("Explorador de Arquivos Brutos", {
-                        "Arquivo Selecionado": selected_file,
-                        "Amostra de Dados": df_raw.head(20)
+                        "Arquivo": selected_file,
+                        "Amostra": df_raw.head(20)
                     })
                 except Exception as e:
                     st.error(f"Error displaying table: {e}")
-                
+
+    st.session_state['active_tab_context'] = "\n".join(context_accumulator)

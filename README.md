@@ -64,8 +64,8 @@ Se você ainda não tem o Docker instalado, siga os passos abaixo ou consulte a 
 
 1.  **Clone o repositório e baixe os arquivos grandes**:
     ```bash
-    git clone https://github.com/luis-ota/hackathon-ufpr-dados-2025.git
-    cd hackathon-ufpr-dados-2025
+    git clone https://github.com/DEST-UFPR/hackathon-ufpr-itape.git
+    cd hackathon-ufpr-itape
     git lfs install
     git lfs pull
     ```
@@ -169,22 +169,28 @@ Foram desenvolvidos cinco dashboards interativos para facilitar a visualização
 1. **Página Inicial:**
     - **Foco Analítico:** Panorama imediato da satisfação e engajamento.
     - **Indicadores-Chave:** Satisfação Média Geral, Engajamento Total (Contagem de Respostas), Gap de Comunicação (% de "Desconheço"), Destaques e Pontos de Risco.
+    ![Visão Geral](docs/visao-geral.png)
+
 
 2. **SINAES:**
     - **Foco Analítico:** Conformidade e score institucional nos 5 Eixos Avaliativos
     - **Indicadores-Chave:** Cobertura das Dimensões do SINAES, Score de Aprovação por Eixo e por Dimensão.
+    ![SINAES](docs/eixos-sinaes.png)
 
 3. **Qualidade de Ensino:**
     - **Foco Analítico:** Avaliação do processo de ensino-aprendizagem
     - **Indicadores-Chave:** Aderência ao Plano de Disciplina, Carga Horária, Índice de Didática, Histograma de Faixa de Satisfação e Comparativo de Score Pedagógico.
+    ![Qualidade de Ensino](docs/qualidade-ensino.png)
 
 4. **Gestão de Cursos:**
     - **Foco Analítico:** Análise da estrutura curricular, apoio e resultados por unidade
     - **Indicadores-Chave:** Interdisciplinaridade, Satisfação com Atendimento e Apoio, Taxa de Visibilidade de Apoio, Ranking de Satisfação por Setor e Gráfico de Dispersão (Score x Volume de Respostas).
+    ![Gestão de Cursos](docs/gestao-cursos.png)
 
 5. **Clima Institucional:**
     - **Foco Analítico:** Percepção dos servidores sobre gestão e infraestrutura.
     - **Indicadores-Chave:** Score de Transparência (RH/Movimentação), Índice de Segurança/Infraestrutura, Gap de Comunicação (Familiaridade com PDE), Ranking de Satisfação dos Servidores e Polarização de Opiniões (Net Score).
+    ![Clima Institucional](docs/clima-ins.png)
 
 ## Próximos Passos dos dados
 - Adição de Análise de Cluster para identificação de perfil de respondente
