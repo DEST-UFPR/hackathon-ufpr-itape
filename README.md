@@ -97,8 +97,7 @@ A pasta `storage/` é mapeada como um volume, então o índice gerado pela IA se
 
 2.  **Configurar variáveis de ambiente**:
     - Crie um arquivo `.env` na raiz do projeto
-    - Gere seu token de segurança: `python encrypt_key.py`
-    - Adicione o token ao `.env`: `APP_SECRET_TOKEN=seu_token_gerado`
+    - Adicione o token ao `.env`: `GOOGLE_API_KEY=<chave-google>`
 
 3.  **Executar aplicação**:
     ```bash
